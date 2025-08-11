@@ -1,0 +1,11 @@
+node_modules/
+.vscode/
+*.log
+
+Myfirstwebapp1/
+finalFirstWeb/
+learn-spring-boot/
+package-lock.json
+package.json
+
+

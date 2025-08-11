@@ -1,26 +1,17 @@
-import { useState } from "react";
-import { LoginApi } from "../api/ApiService";
-import { useNavigate } from 'react-router-dom';
+import React, { useState } from "react";
+import { useUserAuth } from "../api/AuthProvider";
+import { useNavigate } from "react-router-dom";
 
 export default function LoginPage() {
-  
   const [id, setId] = useState("");
   const [password, setPassword] = useState("");
-  const navigate = useNavigate('');
+  const { login } = useUserAuth();
+
+  const navigate = useNavigate();
 
   const handleSubmit = (e) => {
-    e.preventDefault();
-    LoginApi(id, password)
-      .then((response) => {
-        console.log("로그인 성공:", response);
-        navigate('/homePage');  // 경로 맞춰서
-      })
-      .catch((error) => {
-        console.error("로그인 실패:", error);
-      });
+    login(e, id, password);
   };
-
-  
 
   return (
     <form onSubmit={handleSubmit}>

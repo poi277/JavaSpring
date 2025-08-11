@@ -39,8 +39,9 @@ public class BasicAuthenticationSecurityConfiguration {
 	        .csrf(csrf -> csrf.disable())
 	        .authorizeHttpRequests(auth -> auth
 	            .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-	            .requestMatchers("/me", "/logout").hasRole("USER")
-	            .requestMatchers("/", "/login").permitAll()
+						.requestMatchers("/logout").hasRole("USER")
+						.requestMatchers("/", "/profile", "/login", "/register", "/allpostlist")
+						.permitAll()
 	            .anyRequest().authenticated()
 	        )
 	        .sessionManagement(session -> 
