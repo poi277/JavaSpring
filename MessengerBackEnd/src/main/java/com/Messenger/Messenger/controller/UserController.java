@@ -4,11 +4,12 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.web.authentication.logout.SecurityContextLogoutHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -23,8 +24,12 @@ import com.Messenger.Messenger.info.MessagePost;
 import com.Messenger.Messenger.info.MessengerUser;
 import com.Messenger.Messenger.repository.MessagePostRepository;
 import com.Messenger.Messenger.repository.MessengerUserRepository;
+import com.Messenger.Messenger.service.MessengerSessionService;
 import com.Messenger.Messenger.service.MessengerUserService;
 
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 
 @RestController
@@ -33,6 +38,8 @@ public class UserController {
 	private final MessengerUserRepository messengeruserRepository;
 	private final MessengerUserService messengeruserService;
 	private final MessagePostRepository messagePostRepository;
+	@Autowired
+	private MessengerSessionService messengerSessionService;
 
 	UserController(MessengerUserRepository messengeruserRepository, MessengerUserService messengeruserService,
 			MessagePostRepository messagePostRepository) {
@@ -41,47 +48,65 @@ public class UserController {
 		this.messagePostRepository = messagePostRepository;
 	}
 
-	@GetMapping("/")
+	@GetMapping("/hello")
 	public String hello() {
 		return "hello";
 	}
 
-	// Controller
-	@PostMapping("/login")
-	public ResponseEntity<?> login(@RequestBody MessengerUserLoginDTO dto, HttpSession session) {
+	@PostMapping("/userlogin")
+	public ResponseEntity<?> login(@RequestBody MessengerUserLoginDTO dto, HttpServletRequest request) {
 		try {
 			MessengerUser user = messengeruserService.loginService(dto);
-			// SecurityContext 저장
+			HttpSession session = request.getSession(true); // 없으면 새로 생성
+
 			SecurityContext securityContext = SecurityContextHolder.getContext();
 			session.setAttribute("SPRING_SECURITY_CONTEXT", securityContext);
 			UserSessionDTO userSession = new UserSessionDTO(user.getUuid(), user.getName(), "user");
-			session.setAttribute("user", userSession);
-			return ResponseEntity.status(HttpStatus.OK).body("로그인 성공");
-		} catch (IllegalArgumentException e) {
-			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(e.getMessage());
-		} catch (AuthenticationException e) {
-			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("아이디 또는 비밀번호가 올바르지 않습니다.");
+			// 여기 룰은 security와무관함
+			session.setAttribute("USER", userSession);
+			session.setAttribute("USER_UUID", user.getUuid());
+			messengerSessionService.login(user.getUuid());
+			return ResponseEntity.ok("로그인 성공");
 		} catch (Exception e) {
-			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("서버 오류 발생");
-		}
+			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(e.getMessage());
+	    }
 	}
-
-
-	@GetMapping("/profile")
-	public ResponseEntity<?> getCurrentUser(HttpSession session) {
-		UserSessionDTO user = (UserSessionDTO) session.getAttribute("user");
-		if (user != null) {
-			return ResponseEntity.ok(user);
-		}
-		return ResponseEntity.status(HttpStatus.FORBIDDEN).body("로그인 필요");
-	}
-
-
 	@PostMapping("/userlogout")
-	public ResponseEntity<?> logout(HttpSession session) {
-		session.invalidate(); // Redis에 저장된 세션도 같이 삭제됨
+	public ResponseEntity<String> logout(HttpServletRequest request, HttpServletResponse response) {
+		HttpSession session = request.getSession(false);
+	    if (session != null) {
+			// OAuth2 로그인도 포함해서 DTO 가져오기
+			UserSessionDTO userSession = (UserSessionDTO) session.getAttribute("USER");
+			if (userSession != null) {
+				messengerSessionService.logout(userSession.getUuid());
+			}
+	    }
+		// SecurityContext, 세션, 쿠키 모두 무효화
+		SecurityContextLogoutHandler logoutHandler = new SecurityContextLogoutHandler();
+		logoutHandler.setInvalidateHttpSession(true);
+		logoutHandler.setClearAuthentication(true);
+		logoutHandler.logout(request, response, null);
+		// SESSION 쿠키 삭제
+		Cookie cookie = new Cookie("SESSION", null);
+		cookie.setPath("/");
+		cookie.setHttpOnly(true);
+		cookie.setMaxAge(0);
+		response.addCookie(cookie);
 		return ResponseEntity.ok("로그아웃 성공");
 	}
+	@GetMapping("/sessioncheck")
+	public ResponseEntity<?> getCurrentUser(HttpServletRequest request) {
+		HttpSession session = request.getSession(false);
+		if (session == null)
+			return ResponseEntity.status(HttpStatus.FORBIDDEN).body("로그인 필요");
+		UserSessionDTO user = (UserSessionDTO) session.getAttribute("USER");
+		if (user == null)
+			return ResponseEntity.status(HttpStatus.FORBIDDEN).body("로그인 필요");
+		messengerSessionService.heartbeat(user.getUuid());
+
+		return ResponseEntity.ok(user);
+	}
+
 
 	@PostMapping("/register")
 	public ResponseEntity<?> UserRegister(@RequestBody MessengerUserRegisterDTO userRegisterDTO) {

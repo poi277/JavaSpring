@@ -1,7 +1,6 @@
 package com.Messenger.Messenger.basic;
 
-import static org.springframework.security.config.Customizer.withDefaults;
-
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -18,6 +17,8 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import com.Messenger.Messenger.service.MessengerSessionService;
+
 
 //✅ 3. Security 설정 클래스 수정
 @Configuration
@@ -25,6 +26,10 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 public class BasicAuthenticationSecurityConfiguration {
 
 	private final UserDetailsService userDetailsService;
+	@Autowired
+	private MessengerSessionService messengerSessionService;
+	@Autowired
+	private CustomOAuth2UserService customOAuth2UserService; // 추가
 
 	public BasicAuthenticationSecurityConfiguration(UserDetailsService userDetailsService) {
 		this.userDetailsService = userDetailsService;
@@ -32,26 +37,24 @@ public class BasicAuthenticationSecurityConfiguration {
 
 	@Bean
 	public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-	    System.out.println("[SecurityConfig] filterChain 초기화됨");
-
 	    return http
-	        .cors(withDefaults())
-	        .csrf(csrf -> csrf.disable())
-	        .authorizeHttpRequests(auth -> auth
-	            .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-						.requestMatchers("/logout").hasRole("USER")
-						.requestMatchers("/", "/profile", "/login", "/register", "/allpostlist")
-						.permitAll()
-	            .anyRequest().authenticated()
-	        )
-	        .sessionManagement(session -> 
-	            session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
-	                   .maximumSessions(1)
-	        )
-	        .headers(headers -> headers.frameOptions().disable())
-	        .logout(logout -> logout.disable())  // 기본 로그아웃 비활성화
-	        .build();
+				.cors().and().csrf(csrf -> csrf.disable())
+				.authorizeHttpRequests(auth -> auth.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+						// .requestMatchers("/userlogout").hasRole("USER")
+						.requestMatchers("/userlogout", "/userlogin", "/register", "/allpostlist",
+								"/uploads/**",
+								"/post/**", "/userpostlist/**", "/sessioncheck")
+						.permitAll().anyRequest().authenticated())
+				.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
+				.headers(headers -> headers.frameOptions().disable())
+				.oauth2Login(oauth2 -> oauth2
+					    .userInfoEndpoint(userInfo -> userInfo.userService(customOAuth2UserService))
+						.defaultSuccessUrl("http://localhost:3000/", true))
+				.build();
 	}
+
+
+
 
 
 	@Bean
@@ -61,6 +64,7 @@ public class BasicAuthenticationSecurityConfiguration {
 		configuration.addAllowedMethod("*");
 		configuration.addAllowedHeader("*");
 		configuration.setAllowCredentials(true);
+		
 
 		UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
 		source.registerCorsConfiguration("/**", configuration);

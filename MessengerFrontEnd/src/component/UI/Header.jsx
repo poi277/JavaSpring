@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { useUserAuth } from "../api/AuthProvider";
 import { useNavigate,useLocation } from "react-router-dom";
 
-export default function Header() {
+export default function   Header() {
   const { user, loading, logout } = useUserAuth();
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
@@ -15,25 +15,28 @@ export default function Header() {
   };
 
   const isMyPageOrMessenger = () => {
-    // 내 정보 페이지: /[uuid] 또는 /profile/[uuid]
-    // 내 메신저 페이지: /messenger/[uuid] 또는 /messages/[uuid]
     const myInfoPattern = new RegExp(`^/(profile/)?${user?.uuid}$`);
     const myMessengerPattern = new RegExp(`^/(messenger|messages)/${user?.uuid}$`);
     return myInfoPattern.test(location.pathname) || myMessengerPattern.test(location.pathname);
   };
+  
   const handleLogout = async (e) => {
-    e.preventDefault();
-    await logout();
+  e.preventDefault(); // 이벤트 처리
+  await logout();      // 서버 로그아웃 처리
 
-    if (isMyPageOrMessenger()) {
-      navigate("/"); // 홈으로
-    }
+  if (isMyPageOrMessenger()) {
+    navigate("/"); // 홈으로
+  }
 
-    setIsMenuOpen(false);
-  };
+  setIsMenuOpen(false);
+};
 
   const handleSearchChange = (e) => {
     setSearchTerm(e.target.value);
+  };
+  
+  const handleWriteClick = () => {
+    navigate(`/messenger/${user.uuid}/write`);
   };
 
   const handleSearchSubmit = (e) => {
@@ -100,7 +103,7 @@ export default function Header() {
         </button>
       </form>
 
-      {/* 오른쪽 유저 메뉴 */}
+      {/* 오른쪽 유저 메뉴 + 글쓰기 버튼 */}
       <div
         style={{
           flex: 1,
@@ -108,9 +111,27 @@ export default function Header() {
           justifyContent: "flex-end",
           alignItems: "center",
           position: "relative",
+          gap: "10px",
         }}
         ref={menuRef}
       >
+        {user && (
+          <button
+            onClick={handleWriteClick}
+            style={{
+              padding: "8px 12px",
+              fontSize: "1rem",
+              cursor: "pointer",
+              borderRadius: "4px",
+              border: "1px solid #1976d2",
+              backgroundColor: "#1976d2",
+              color: "white",
+            }}
+          >
+            글쓰기
+          </button>
+        )}
+
         {user ? (
           <>
             <img
@@ -142,7 +163,7 @@ export default function Header() {
               >
                 <button
                   onClick={() => {
-                    navigate(`/${user.uuid}`);
+                    navigate(`/messenger/${user.uuid}/info`);
                     setIsMenuOpen(false);
                   }}
                   style={menuButtonStyle}
@@ -160,8 +181,8 @@ export default function Header() {
                 </button>
                 <hr style={{ margin: "5px 0", borderColor: "#eee" }} />
                 <button onClick={handleLogout} style={menuButtonStyle}>
-                    로그아웃
-                  </button>
+                  로그아웃
+                </button>
               </div>
             )}
           </>
