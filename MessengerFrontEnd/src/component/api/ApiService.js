@@ -5,12 +5,12 @@ const BASE_URL = process.env.REACT_APP_BASE_URL;
 
 // 로그인 요청
 export const LoginApi = async (id, password) => {
-  const response = await GuestApiClient.post('/login', { id, password });
+  const response = await GuestApiClient.post('/userlogin', { id, password });
   return response.data;
 };
-// 로그인 사용자 정보 요청
-export const profileApi = () => {
-  return UserApiClient.get('/profile');
+// 로그인 사용자 세션체크
+export const SessioncheckApi = () => {
+  return GuestApiClient.get('/sessioncheck');
 };
 
 // 로그아웃 요청
@@ -41,4 +41,27 @@ export const UserPostListApi = (uuid) => {
 };
 export const UserPosttApi = (postid) => {
   return GuestApiClient.get(`/post/${postid}`);
+};
+
+export const friendListApi = () => {
+  return UserApiClient.get("/friend/list");
+};
+export const friendrequestListApi = () => {
+  return UserApiClient.get("/friend/requestslist");
+};
+export const acceptFriendRequestApi = (requestId) => {  
+  return UserApiClient.post(`/friend/accept/${requestId}`);
+};
+export const rejectFriendRequestApi = (requestId) => {
+  return UserApiClient.post(`/friend/reject/${requestId}`);
+};
+export const deleteFriendApi = (friendUuid) => {
+  return UserApiClient.delete(`/friend/remove/${friendUuid}`);
+};
+
+export const sendFriendRequestApi = async (receiveruuid) => {
+  const response = await UserApiClient.post(`/friend/sendrequest/${receiveruuid}`, null, {
+    headers: { "Content-Type": "application/json" }
+  });
+  return response.data;
 };

@@ -12,11 +12,12 @@ function Navigate() {
       <AuthProvider>
         <Routes>
           <Route path="/" element={<UserHomePage />} />
-          <Route path="/:uuid" element={<UserMyInfomation />} />
+          <Route path="/messenger/:uuid/info" element={<UserMyInfomation />} />
           <Route path="/messenger/:uuid" element={<UserMyMessenger />} />
           <Route path="/messenger/:uuid/write" element={<UserMessageWrite />} />
           <Route path="/messenger/:uuid/:postid" element={<UserMyMessengerDetail />} />
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/login/register" element={<LoginPage />} />
         </Routes>
       </AuthProvider>
     </BrowserRouter>

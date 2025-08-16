@@ -1,10 +1,8 @@
 package com.Messenger.Messenger.service;
 
 import java.util.Optional;
-import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -15,6 +13,7 @@ import org.springframework.stereotype.Service;
 
 import com.Messenger.Messenger.DTO.MessengerUserLoginDTO;
 import com.Messenger.Messenger.DTO.MessengerUserRegisterDTO;
+import com.Messenger.Messenger.basic.UUIDUtil;
 import com.Messenger.Messenger.info.MessengerUser;
 import com.Messenger.Messenger.repository.MessengerUserRepository;
 
@@ -37,22 +36,12 @@ public class MessengerUserService {
 		}
 		String encodedPassword = passwordEncoder.encode(dto.getPassword());
 
-		int maxRetries = 5;
-		for (int i = 0; i < maxRetries; i++) {
-			String uuid = UUID.randomUUID().toString();
-			MessengerUser user = new MessengerUser(dto.getId(), encodedPassword, dto.getName(), uuid);
+		// UUID 생성
+		String uuid = UUIDUtil.generateUniqueUuid(messengeruserRepository);
 
-			try {
-				messengeruserRepository.save(user);
-				return; // 저장 성공 시 메서드 종료
-			} catch (DataIntegrityViolationException e) {
-				// UUID 중복 가능성 있음, 재시도
-				if (i == maxRetries - 1) {
-					throw new RuntimeException("UUID 중복으로 인한 저장 실패, 최대 재시도 횟수 초과");
-				}
-				System.out.println("UUID 중복 발생, 재시도 중... 시도 횟수: " + (i + 1));
-			}
-		}
+		MessengerUser user = new MessengerUser(dto.getId(), encodedPassword, dto.getName(), uuid, dto.getEmail(),
+				"Messenger");
+		messengeruserRepository.save(user);
 	}
 
 	public MessengerUser loginService(MessengerUserLoginDTO dto) {

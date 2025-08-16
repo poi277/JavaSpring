@@ -9,6 +9,8 @@ import com.Messenger.Messenger.info.MessengerUser;
 public interface MessengerUserRepository extends JpaRepository<MessengerUser, String> {
 	Optional<MessengerUser> findByUuid(String uuid);
 	Optional<MessengerUser> findByName(String name);
+
+	Optional<MessengerUser> findByEmail(String email);
 	boolean existsByUuid(String uuid);
 
 }
